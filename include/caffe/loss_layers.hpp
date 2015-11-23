@@ -588,6 +588,8 @@ class MyLossLayer : public LossLayer<Dtype> {
  public:
   explicit MyLossLayer(const LayerParameter& param)
       : LossLayer<Dtype>(param) {}
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
 
@@ -628,6 +630,11 @@ class MyLossLayer : public LossLayer<Dtype> {
    */
   virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+
+  Blob<Dtype> distm_;
+  Blob<Dtype> u0_; // uniform distribution to use
+  Blob<Dtype> v_; // temp storage for v
+  Blob<Dtype> alpha_; //state variable alpha to get gradient
 };
 
 
