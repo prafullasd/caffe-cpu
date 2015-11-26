@@ -771,6 +771,12 @@ message MVNParameter {
   optional float eps = 3 [default = 1e-9];
 }
 
+message MyParameter {
+  // Specify the distance matrix source.
+  optional string source = 1;
+}
+
+
 message PoolingParameter {
   enum PoolMethod {
     MAX = 0;

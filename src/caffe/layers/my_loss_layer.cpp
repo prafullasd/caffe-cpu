@@ -5,36 +5,14 @@
 #include "hdf5.h"
 #include "hdf5_hl.h"
 #include "stdint.h"
-#include "filler.hpp"
+#include "caffe/filler.hpp"
 #include "caffe/util/hdf5.hpp"
 #include "caffe/loss_layers.hpp"
 #include "caffe/util/math_functions.hpp"
 
-namespace caffe {
-template<typename Dtype>
-MyLossLayer<Dtype>::MyLossLayer(const LayerParameter& param)
-      : LossLayer<Dtype>(param) {
-    CHECK(this->layer_param_.my_param().has_source())
-        << "Distance matrix source must be specified.";
-    BlobProto blob_proto;
-    filename = this->layer_param_.my_param().source();
-    hid_t file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
-    if (file_id < 0) {
-      LOG(FATAL) << "Failed opening HDF5 file: " << filename;
-    }
-    
-    //If have to do using binaryproto
-    //ReadProtoFromBinaryFile(filename, &blob_proto);
-    const int MIN_DATA_DIM = 1;
-    const int MAX_DATA_DIM = INT_MAX;
-    hdf5_load_nd_dataset(file_id, this->layer_param_.top().c_str(),
-        MIN_DATA_DIM, MAX_DATA_DIM, &blob_proto);
-    herr_t status = H5Fclose(file_id);
-    CHECK_GE(status, 0) << "Failed to close HDF5 file: " << filename;  
-    //DLOG(INFO) << "Successully loaded " << blob_proto->shape(0) << " rows";
-    distm_.FromProto(blob_proto);
-}
+#define DISTANCE_DATASET_NAME "Distance"
 
+namespace caffe {
 template <typename Dtype>
 void MyLossLayer<Dtype>::LayerSetUp(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
@@ -43,8 +21,32 @@ void MyLossLayer<Dtype>::LayerSetUp(
   u0_.ReshapeLike(*bottom[0]);
   float len = bottom[0]->channels();
   float c = 1.0 / len;
-  for (int i = 0; i < len; ++i)
+  for (int i = 0; i < len; ++i) {
     u0_.mutable_cpu_data()[i] = Dtype(c);
+  }
+  CHECK(this->layer_param_.my_param().has_source())
+      << "Distance matrix source must be specified.";
+  // For binaryproto
+  // BlobProto blob_proto;
+  string filename = this->layer_param_.my_param().source();
+  hid_t file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+  if (file_id < 0) {
+    LOG(FATAL) << "Failed opening HDF5 file: " << filename;
+  }
+  
+  //If have to do using binaryproto
+  //ReadProtoFromBinaryFile(filename, &blob_proto);
+  const int MIN_DATA_DIM = 1;
+  const int MAX_DATA_DIM = INT_MAX;
+  hdf5_load_nd_dataset(file_id, DISTANCE_DATASET_NAME,
+                       MIN_DATA_DIM, MAX_DATA_DIM, &distm_);
+  herr_t status = H5Fclose(file_id);
+  CHECK_GE(status, 0) << "Failed to close HDF5 file: " << filename;
+  //DLOG(INFO) << "Successully loaded " << blob_proto->shape(0) << " rows";
+  // For binaryproto
+  //distm_.FromProto(blob_proto);
+
+
 }
 
 template <typename Dtype>
@@ -61,7 +63,7 @@ void MyLossLayer<Dtype>::Forward_cpu(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   const Dtype* bottom_data = bottom[0]->cpu_data();
   const Dtype* bottom_label = bottom[1]->cpu_data();
-  const Dtype* distm = distm_->cpu_data();
+  const Dtype* distm = distm_.cpu_data();
   int num = bottom[0]->num();
   int dim = bottom[0]->count() / bottom[0]->num();
   Dtype loss = 0;
