@@ -10,7 +10,7 @@
 #include "caffe/loss_layers.hpp"
 #include "caffe/util/math_functions.hpp"
 
-#define DISTANCE_DATASET_NAME "Distance"
+#define DISTANCE_DATASET_NAME "data"
 
 namespace caffe {
 template <typename Dtype>
