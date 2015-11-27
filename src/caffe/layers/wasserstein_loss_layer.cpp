@@ -62,9 +62,17 @@ template <typename Dtype>
 void WassersteinLossLayer<Dtype>::Reshape(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   LossLayer<Dtype>::Reshape(bottom, top);
-  CHECK_EQ(bottom[1]->channels(), 1);
+  CHECK_EQ(bottom[1]->channels(), bottom[0]->channels());
   CHECK_EQ(bottom[1]->height(), 1);
   CHECK_EQ(bottom[1]->width(), 1);
+}
+
+template <typename Dtype>
+void printVector(int count, Dtype* vec) {
+  for (int i = 0; i < count; i++) {
+    printf("%f, ", float(vec[i]));
+  }
+  printf("\n");
 }
 
 template <typename Dtype>
@@ -92,14 +100,16 @@ void WassersteinLossLayer<Dtype>::Forward_cpu(
   uint32_t sinkhorn_iter = this->layer_param_.wasserstein_param().sinkhorn_iter();
   for (int i = 0; i < sinkhorn_iter; i++) {
     caffe_cpu_gemm(CblasNoTrans, CblasNoTrans, num, dim, dim, Dtype(1.),
-                              u, K, Dtype(0.), tmp);
+                   u, K, Dtype(0.), tmp);
     caffe_div(count, bottom_label, tmp, tmp);
     caffe_cpu_gemm(CblasNoTrans, CblasTrans, num, dim, dim, Dtype(1.),
-                   tmp, K, Dtype(0.), tmp);
-    caffe_div(count, bottom_data, tmp, u);
+                   tmp, K, Dtype(0.), u);
+    caffe_div(count, bottom_data, u, u);
   }
-  
+
+  v_.ReshapeLike(u0_);
   Dtype* v = v_.mutable_cpu_data();
+
   caffe_cpu_gemm(CblasNoTrans, CblasNoTrans, num, dim, dim, Dtype(1.),
                  u, K, Dtype(0.), tmp);
   caffe_div(count, bottom_label, tmp, v);
@@ -116,6 +126,7 @@ void WassersteinLossLayer<Dtype>::Forward_cpu(
   top[0]->mutable_cpu_data()[0] = loss / num;
   
   // Compute gradient
+  alpha_.ReshapeLike(u0_);
   Dtype* alpha = alpha_.mutable_cpu_data();
   caffe_log(count, u, alpha);
   caffe_scal(count, Dtype(1.0/(lambda*num)), alpha);
