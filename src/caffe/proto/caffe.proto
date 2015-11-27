@@ -774,6 +774,8 @@ message MVNParameter {
 message MyParameter {
   // Specify the distance matrix source.
   optional string source = 1;
+  optional uint32 sinkhorn_iter = 2 [default = 50];
+  optional float lambda = 3 [default = 0];
 }
 
 

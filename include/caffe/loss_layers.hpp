@@ -634,6 +634,8 @@ class MyLossLayer : public LossLayer<Dtype> {
   Blob<Dtype> distm_;
   Blob<Dtype> u0_; // uniform distribution to use
   Blob<Dtype> v_; // temp storage for v
+  Blob<Dtype> K_; // e^(-lam*dist)
+  Blob<Dtype> KM_; // K * dist
   Blob<Dtype> alpha_; //state variable alpha to get gradient
 };
 

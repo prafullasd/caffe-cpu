@@ -19,10 +19,12 @@ void MyLossLayer<Dtype>::LayerSetUp(
   LossLayer<Dtype>::LayerSetUp(bottom, top);
   // initialize a uniform distribution u as a state variable
   u0_.ReshapeLike(*bottom[0]);
-  float len = bottom[0]->channels();
-  float c = 1.0 / len;
-  for (int i = 0; i < len; ++i) {
-    u0_.mutable_cpu_data()[i] = Dtype(c);
+  Dtype* u = u0_.mutable_cpu_data();
+  int num = bottom[0]->num();
+  int dim = bottom[0]->count() / num;
+  float c = 1.0 / dim;
+  for (int i = 0; i < bottom[0]->count(); ++i) {
+      u[i] = Dtype(c);
   }
   CHECK(this->layer_param_.my_param().has_source())
       << "Distance matrix source must be specified.";
@@ -45,8 +47,15 @@ void MyLossLayer<Dtype>::LayerSetUp(
   //DLOG(INFO) << "Successully loaded " << blob_proto->shape(0) << " rows";
   // For binaryproto
   //distm_.FromProto(blob_proto);
+  
+  float lambda = this->layer_param_.my_param().lambda();
+  // Initialize K and KM
+  K_.ReshapeLike(distm_);
+  caffe_scal(distm_.count(), Dtype(-lambda), K_.mutable_cpu_data());
+  caffe_exp(K_.count(), K_.cpu_data(), K_.mutable_cpu_data());
 
-
+  KM_.ReshapeLike(distm_);
+  caffe_mul(K_.count(), K_.cpu_data(), distm_.cpu_data(), KM_.mutable_cpu_data());
 }
 
 template <typename Dtype>
@@ -63,22 +72,53 @@ void MyLossLayer<Dtype>::Forward_cpu(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   const Dtype* bottom_data = bottom[0]->cpu_data();
   const Dtype* bottom_label = bottom[1]->cpu_data();
-  const Dtype* distm = distm_.cpu_data();
+  const Dtype* K = K_.cpu_data();
   int num = bottom[0]->num();
-  int dim = bottom[0]->count() / bottom[0]->num();
+  int count = bottom[0]->count();
+  int dim = count / num;
+  float lambda = this->layer_param_.my_param().lambda();
+  
+  Dtype* u = u0_.mutable_cpu_data();
+  // make u a uniform distribution
+  float c = 1.0 / dim;
+  for (int i = 0; i < count; ++i) {
+      u[i] = Dtype(c);
+  }
+  
+  Blob<Dtype> tmp_;
+  tmp_.ReshapeLike(u0_);
+  Dtype* tmp = tmp_.mutable_cpu_data();
+  
+  uint32_t sinkhorn_iter = this->layer_param_.my_param().sinkhorn_iter();
+  for (int i = 0; i < sinkhorn_iter; i++) {
+    caffe_cpu_gemm(CblasNoTrans, CblasNoTrans, num, dim, dim, Dtype(1.),
+                              u, K, Dtype(0.), tmp);
+    caffe_div(count, bottom_label, tmp, tmp);
+    caffe_cpu_gemm(CblasNoTrans, CblasTrans, num, dim, dim, Dtype(1.),
+                   tmp, K, Dtype(0.), tmp);
+    caffe_div(count, bottom_data, tmp, u);
+  }
+  
+  Dtype* v = v_.mutable_cpu_data();
+  caffe_cpu_gemm(CblasNoTrans, CblasNoTrans, num, dim, dim, Dtype(1.),
+                 u, K, Dtype(0.), tmp);
+  caffe_div(count, bottom_label, tmp, v);
+
+  const Dtype* KM = KM_.cpu_data();
+  caffe_cpu_gemm(CblasNoTrans, CblasNoTrans, num, dim, dim, Dtype(1.),
+                 v, KM, Dtype(0.), tmp);
+  caffe_mul(count, u, tmp, tmp);
+  
   Dtype loss = 0;
-  // u = state variable u0_
-  // while now converged, update u
-  // calculate v_ from u
-  // calculate loss from v_ and distm
-  // save state variable alpha_ as gradient
-  for (int i = 0; i < num; ++i) {
-    int label = static_cast<int>(bottom_label[i]);
-    Dtype prob = std::max(
-        bottom_data[i * dim + label], Dtype(kLOG_THRESHOLD));
-    loss -= log(prob);
+  for (int i =0; i < count; i++) {
+    loss += tmp[i];
   }
   top[0]->mutable_cpu_data()[0] = loss / num;
+  
+  // Compute gradient
+  Dtype* alpha = alpha_.mutable_cpu_data();
+  caffe_log(count, u, alpha);
+  caffe_scal(count, Dtype(1.0/(lambda*num)), alpha);
 }
 
 template <typename Dtype>
@@ -91,19 +131,8 @@ void MyLossLayer<Dtype>::Backward_cpu(
                << " Layer cannot backpropagate to label inputs.";
   }
   if (propagate_down[0]) {
-    const Dtype* bottom_data = bottom[0]->cpu_data();
-    const Dtype* bottom_label = bottom[1]->cpu_data();
     Dtype* bottom_diff = bottom[0]->mutable_cpu_diff();
-    int num = bottom[0]->num();
-    int dim = bottom[0]->count() / bottom[0]->num();
-    caffe_set(bottom[0]->count(), Dtype(0), bottom_diff);
-    const Dtype scale = - top[0]->cpu_diff()[0] / num;
-    for (int i = 0; i < num; ++i) {
-      int label = static_cast<int>(bottom_label[i]);
-      Dtype prob = std::max(
-          bottom_data[i * dim + label], Dtype(kLOG_THRESHOLD));
-      bottom_diff[i * dim + label] = scale / prob;
-    }
+    caffe_copy(bottom[0]->count(), alpha_.cpu_data(), bottom_diff);
   }
 }
 
