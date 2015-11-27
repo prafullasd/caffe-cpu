@@ -14,7 +14,7 @@
 
 namespace caffe {
 template <typename Dtype>
-void MyLossLayer<Dtype>::LayerSetUp(
+void WassersteinLossLayer<Dtype>::LayerSetUp(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   LossLayer<Dtype>::LayerSetUp(bottom, top);
   // initialize a uniform distribution u as a state variable
@@ -26,11 +26,11 @@ void MyLossLayer<Dtype>::LayerSetUp(
   for (int i = 0; i < bottom[0]->count(); ++i) {
       u[i] = Dtype(c);
   }
-  CHECK(this->layer_param_.my_param().has_source())
+  CHECK(this->layer_param_.wasserstein_param().has_source())
       << "Distance matrix source must be specified.";
   // For binaryproto
   // BlobProto blob_proto;
-  string filename = this->layer_param_.my_param().source();
+  string filename = this->layer_param_.wasserstein_param().source();
   hid_t file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   if (file_id < 0) {
     LOG(FATAL) << "Failed opening HDF5 file: " << filename;
@@ -48,7 +48,7 @@ void MyLossLayer<Dtype>::LayerSetUp(
   // For binaryproto
   //distm_.FromProto(blob_proto);
   
-  float lambda = this->layer_param_.my_param().lambda();
+  float lambda = this->layer_param_.wasserstein_param().lambda();
   // Initialize K and KM
   K_.ReshapeLike(distm_);
   caffe_scal(distm_.count(), Dtype(-lambda), K_.mutable_cpu_data());
@@ -59,7 +59,7 @@ void MyLossLayer<Dtype>::LayerSetUp(
 }
 
 template <typename Dtype>
-void MyLossLayer<Dtype>::Reshape(
+void WassersteinLossLayer<Dtype>::Reshape(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   LossLayer<Dtype>::Reshape(bottom, top);
   CHECK_EQ(bottom[1]->channels(), 1);
@@ -68,7 +68,7 @@ void MyLossLayer<Dtype>::Reshape(
 }
 
 template <typename Dtype>
-void MyLossLayer<Dtype>::Forward_cpu(
+void WassersteinLossLayer<Dtype>::Forward_cpu(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   const Dtype* bottom_data = bottom[0]->cpu_data();
   const Dtype* bottom_label = bottom[1]->cpu_data();
@@ -76,7 +76,7 @@ void MyLossLayer<Dtype>::Forward_cpu(
   int num = bottom[0]->num();
   int count = bottom[0]->count();
   int dim = count / num;
-  float lambda = this->layer_param_.my_param().lambda();
+  float lambda = this->layer_param_.wasserstein_param().lambda();
   
   Dtype* u = u0_.mutable_cpu_data();
   // make u a uniform distribution
@@ -89,7 +89,7 @@ void MyLossLayer<Dtype>::Forward_cpu(
   tmp_.ReshapeLike(u0_);
   Dtype* tmp = tmp_.mutable_cpu_data();
   
-  uint32_t sinkhorn_iter = this->layer_param_.my_param().sinkhorn_iter();
+  uint32_t sinkhorn_iter = this->layer_param_.wasserstein_param().sinkhorn_iter();
   for (int i = 0; i < sinkhorn_iter; i++) {
     caffe_cpu_gemm(CblasNoTrans, CblasNoTrans, num, dim, dim, Dtype(1.),
                               u, K, Dtype(0.), tmp);
@@ -122,7 +122,7 @@ void MyLossLayer<Dtype>::Forward_cpu(
 }
 
 template <typename Dtype>
-void MyLossLayer<Dtype>::Backward_cpu(
+void WassersteinLossLayer<Dtype>::Backward_cpu(
     const vector<Blob<Dtype>*>& top, const vector<bool>& propagate_down,
     const vector<Blob<Dtype>*>& bottom) {
   // use state variable alpha_ to get gradient
@@ -136,7 +136,7 @@ void MyLossLayer<Dtype>::Backward_cpu(
   }
 }
 
-INSTANTIATE_CLASS(MyLossLayer);
-REGISTER_LAYER_CLASS(MyLoss);
+INSTANTIATE_CLASS(WassersteinLossLayer);
+REGISTER_LAYER_CLASS(WassersteinLoss);
 
 }  // namespace caffe

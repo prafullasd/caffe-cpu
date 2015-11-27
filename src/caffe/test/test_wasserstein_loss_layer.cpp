@@ -13,9 +13,9 @@
 namespace caffe {
 
 template <typename Dtype>
-class MyLossLayerTest : public CPUDeviceTest<Dtype> {
+class WassersteinLossLayerTest : public CPUDeviceTest<Dtype> {
  protected:
-  MyLossLayerTest()
+  WassersteinLossLayerTest()
       : blob_bottom_data_(new Blob<Dtype>(10, 5, 1, 1)),
         blob_bottom_label_(new Blob<Dtype>(10, 1, 1, 1)),
         blob_top_loss_(new Blob<Dtype>()) {
@@ -31,7 +31,7 @@ class MyLossLayerTest : public CPUDeviceTest<Dtype> {
     blob_bottom_vec_.push_back(blob_bottom_label_);
     blob_top_vec_.push_back(blob_top_loss_);
   }
-  virtual ~MyLossLayerTest() {
+  virtual ~WassersteinLossLayerTest() {
     delete blob_bottom_data_;
     delete blob_bottom_label_;
     delete blob_top_loss_;
@@ -43,12 +43,12 @@ class MyLossLayerTest : public CPUDeviceTest<Dtype> {
   vector<Blob<Dtype>*> blob_top_vec_;
 };
 
-TYPED_TEST_CASE(MyLossLayerTest, TestDtypes);
+TYPED_TEST_CASE(WassersteinLossLayerTest, TestDtypes);
 
 
-TYPED_TEST(MyLossLayerTest, TestGradientCPU) {
+TYPED_TEST(WassersteinLossLayerTest, TestGradientCPU) {
   LayerParameter layer_param;
-  MyLossLayer<TypeParam> layer(layer_param);
+  WassersteinLossLayer<TypeParam> layer(layer_param);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   GradientChecker<TypeParam> checker(1e-2, 2*1e-2, 1701, 0, 0.05);
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,

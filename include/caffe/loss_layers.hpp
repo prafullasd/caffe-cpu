@@ -584,19 +584,19 @@ class MultinomialLogisticLossLayer : public LossLayer<Dtype> {
  *      @f$
  */
 template <typename Dtype>
-class MyLossLayer : public LossLayer<Dtype> {
+class WassersteinLossLayer : public LossLayer<Dtype> {
  public:
-  explicit MyLossLayer(const LayerParameter& param)
+  explicit WassersteinLossLayer(const LayerParameter& param)
       : LossLayer<Dtype>(param) {}
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
 
-  virtual inline const char* type() const { return "MyLoss"; }
+  virtual inline const char* type() const { return "WassersteinLoss"; }
 
  protected:
-  /// @copydoc MyLossLayer
+  /// @copydoc WassersteinLossLayer
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
 
