@@ -68,7 +68,8 @@ void WassersteinLossLayer<Dtype>::Reshape(
 }
 
 template <typename Dtype>
-void printVector(int count, Dtype* vec) {
+void printVector(const char* name, int count, Dtype* vec) {
+  printf("%s\n", name);
   for (int i = 0; i < count; i++) {
     printf("%f, ", float(vec[i]));
   }
@@ -79,7 +80,7 @@ template <typename Dtype>
 void WassersteinLossLayer<Dtype>::Forward_cpu(
   const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   const Dtype* bottom_data = bottom[0]->cpu_data();
-  const Dtype* init_bottom_label = bottom[1]->cpu_data();
+  Dtype* init_bottom_label = bottom[1]->mutable_cpu_data();
 
   const Dtype* K = K_.cpu_data();
   int num = bottom[0]->num();
@@ -87,25 +88,29 @@ void WassersteinLossLayer<Dtype>::Forward_cpu(
   int dim = count / num;
   float lambda = this->layer_param_.wasserstein_param().lambda();
   
-  const Dtype* bottom_label; // want this to be n x k
+  Blob<Dtype> label_tmp_;
+  label_tmp_.ReshapeLike(u0_);
+  Dtype* bottom_label = label_tmp_.mutable_cpu_data();
   if (bottom[1]->channels() == 1) {
-    // init_bottom_label is n x 1.
-    Blob<Dtype> label_tmp_;
-    label_tmp_.ReshapeLike(u0_);
-    Dtype* new_data = label_tmp_.mutable_cpu_data();
+    // init_bottom_label is n x 1.    
     for (int i =0; i < count; i++) {
-      new_data[i] = Dtype(0);
+      bottom_label[i] = Dtype(0);
     }
+    //printVector(count, bottom_label);
     for (int i = 0; i < num; ++i){
+      //printf("%f\n", init_bottom_label[i]);
       int label = static_cast<int>(init_bottom_label[i]);
-      new_data[i*dim + label] = Dtype(1);
-    }
-    bottom_label = label_tmp_.cpu_data();   
+      bottom_label[i*dim + label] = Dtype(1);
+    }  
+    //printf("Here\n");
+    //printVector(count, bottom_label);
+    //printf("Further\n");
   }
   else {
+    //printf("Never\n");
     bottom_label = init_bottom_label;  
   }
-  
+  //printVector("labels", count, bottom_label);
   Dtype* u = u0_.mutable_cpu_data();
   // make u a uniform distribution
   float c = 1.0 / dim;
@@ -143,13 +148,18 @@ void WassersteinLossLayer<Dtype>::Forward_cpu(
   for (int i =0; i < count; i++) {
     loss += tmp[i];
   }
+  //printf("%f\n", loss);
   top[0]->mutable_cpu_data()[0] = loss / num;
   
   // Compute gradient
   alpha_.ReshapeLike(u0_);
   Dtype* alpha = alpha_.mutable_cpu_data();
   caffe_log(count, u, alpha);
+  //printVector("alphalogged", count, alpha); 
   caffe_scal(count, Dtype(1.0/(lambda*num)), alpha);
+  //printVector("u", count, u);
+  //printVector("tmp", count, tmp);
+  //printVector("alpha", count, alpha);
 }
 
 template <typename Dtype>
