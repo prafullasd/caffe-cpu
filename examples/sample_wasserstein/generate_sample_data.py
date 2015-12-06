@@ -29,3 +29,5 @@ with h5py.File(script_dir + '/sample_data.h5', 'w') as f:
     f['data'] = data
     f['label'] = label
 
+with open(script_dir + '/sample_data_list.txt', 'w') as f:
+    f.write('examples/sample_wasserstein/sample_data.h5\n')

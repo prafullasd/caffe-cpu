@@ -8,7 +8,7 @@ layer {
     phase: TRAIN
   }
   hdf5_data_param {
-    source: "examples/sample_wasserstein/sample_data.h5"
+    source: "examples/sample_wasserstein/sample_data_list.txt"
     batch_size: 64
   }
 }
@@ -21,7 +21,7 @@ layer {
     phase: TEST
   }
   hdf5_data_param {
-    source: "examples/sample_wasserstein/sample_data.h5"
+    source: "examples/sample_wasserstein/sample_data_list.txt"
     batch_size: 100
   }
 }
