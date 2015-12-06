@@ -117,20 +117,10 @@ layer {
 }
 
 layer {
-  name: "pred1"
-  type: "Softmax"
-  bottom: "ip3"
-  top: "pred"
-}
-layer {
   name: "loss"
-  type: "WassersteinLoss"
-  bottom: "pred"
+  type: "SoftmaxWithLoss"
+  bottom: "ip3"
   bottom: "label"
   top: "loss"
-  wasserstein_param {
-    lambda: 0.1
-    source: "examples/sample_wasserstein/sample_dist_mat.h5"
-  }
 }
 
