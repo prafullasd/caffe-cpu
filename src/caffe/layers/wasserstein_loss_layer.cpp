@@ -51,6 +51,7 @@ void WassersteinLossLayer<Dtype>::LayerSetUp(
   float lambda = this->layer_param_.wasserstein_param().lambda();
   // Initialize K and KM
   K_.ReshapeLike(distm_);
+    caffe_copy(K_.count(), distm_.cpu_data(), K_.mutable_cpu_data());
   caffe_scal(distm_.count(), Dtype(-lambda), K_.mutable_cpu_data());
   caffe_exp(K_.count(), K_.cpu_data(), K_.mutable_cpu_data());
 
