@@ -62,7 +62,7 @@ template <typename Dtype>
 void WassersteinLossLayer<Dtype>::Reshape(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   LossLayer<Dtype>::Reshape(bottom, top);
-  CHECK_EQ(bottom[1]->channels(), bottom[0]->channels());
+  // replace with CHECK_EQ(bottom[1]->channels(), 1) OR CHECK_EQ(bottom[1]->channels(), bottom[0]->channels())
   CHECK_EQ(bottom[1]->height(), 1);
   CHECK_EQ(bottom[1]->width(), 1);
 }
@@ -77,14 +77,34 @@ void printVector(int count, Dtype* vec) {
 
 template <typename Dtype>
 void WassersteinLossLayer<Dtype>::Forward_cpu(
-    const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
+  const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   const Dtype* bottom_data = bottom[0]->cpu_data();
-  const Dtype* bottom_label = bottom[1]->cpu_data();
+  const Dtype* init_bottom_label = bottom[1]->cpu_data();
+
   const Dtype* K = K_.cpu_data();
   int num = bottom[0]->num();
   int count = bottom[0]->count();
   int dim = count / num;
   float lambda = this->layer_param_.wasserstein_param().lambda();
+  
+  const Dtype* bottom_label; // want this to be n x k
+  if (bottom[1]->channels() == 1) {
+    // init_bottom_label is n x 1.
+    Blob<Dtype> label_tmp_;
+    label_tmp_.ReshapeLike(u0_);
+    Dtype* new_data = label_tmp_.mutable_cpu_data();
+    for (int i =0; i < count; i++) {
+      new_data[i] = Dtype(0);
+    }
+    for (int i = 0; i < num; ++i){
+      int label = static_cast<int>(init_bottom_label[i]);
+      new_data[i*dim + label] = Dtype(1);
+    }
+    bottom_label = label_tmp_.cpu_data();   
+  }
+  else {
+    bottom_label = init_bottom_label;  
+  }
   
   Dtype* u = u0_.mutable_cpu_data();
   // make u a uniform distribution
