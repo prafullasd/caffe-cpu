@@ -14,6 +14,15 @@
 
 namespace caffe {
 template <typename Dtype>
+void printVector(const char* name, int count, Dtype* vec) {
+    printf("%s\n", name);
+    for (int i = 0; i < count; i++) {
+        printf("%f, ", float(vec[i]));
+    }
+    printf("\n");
+}
+    
+template <typename Dtype>
 void WassersteinLossLayer<Dtype>::LayerSetUp(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   LossLayer<Dtype>::LayerSetUp(bottom, top);
@@ -66,16 +75,12 @@ void WassersteinLossLayer<Dtype>::Reshape(
   // replace with CHECK_EQ(bottom[1]->channels(), 1) OR CHECK_EQ(bottom[1]->channels(), bottom[0]->channels())
   CHECK_EQ(bottom[1]->height(), 1);
   CHECK_EQ(bottom[1]->width(), 1);
+  int num_labels = bottom[0]->count()/bottom[0]->num();
+  CHECK_EQ(distm_.num(), num_labels) << "Wrong dimensions of distance matrix";
+  CHECK_EQ(distm_.count(), num_labels * num_labels) << "Wrong dimensions of distance matrix";
+    
 }
 
-template <typename Dtype>
-void printVector(const char* name, int count, Dtype* vec) {
-  printf("%s\n", name);
-  for (int i = 0; i < count; i++) {
-    printf("%f, ", float(vec[i]));
-  }
-  printf("\n");
-}
 
 template <typename Dtype>
 void WassersteinLossLayer<Dtype>::Forward_cpu(
