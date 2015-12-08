@@ -12,12 +12,21 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 # Generate HDF5DataLayer sample_data.h5
 d = 3
 sigma = 0.25
+noise = 0.5
 
 num_cols = 2
 height = 1
 width = 1
 train_rows = 2000
 test_rows = 100
+
+def getNeighbors(l):
+  neighbors = []
+  if (l-d >= 0): neighbors.append(l-d)
+  if (l-1 >= 0): neighbors.append(l-1)
+  if (l+1 < d*d): neighbors.append(l+1)
+  if (l+d < d*d) : neighbors.append(l+d)
+  return neighbors
 
 # training data
 total_size = num_cols * train_rows * height * width
@@ -34,7 +43,16 @@ for i in range(train_rows):
   y = random.randint(0, d-1)
   data[i][0] = random.gauss(x, sigma)
   data[i][1] = random.gauss(y, sigma)
-  label[i] = x * d + y
+  oriLabel = x * d + y
+  if (random.randint(0,100) < noise * 100):
+    neighbors = getNeighbors(oriLabel)
+    ind = random.randint(0, len(neighbors) - 1)
+    label[i] = neighbors[ind]
+  else :
+    label[i] = oriLabel
+
+
+
 
 print data
 print label
