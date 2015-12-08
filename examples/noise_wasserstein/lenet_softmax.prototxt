@@ -9,7 +9,7 @@ layer {
   }
   hdf5_data_param {
     source: "examples/noise_wasserstein/sample_train_data_list.txt"
-    batch_size: 50
+    batch_size: 100
   }
 }
 layer {
@@ -22,7 +22,7 @@ layer {
   }
   hdf5_data_param {
     source: "examples/noise_wasserstein/sample_test_data_list.txt"
-    batch_size: 50
+    batch_size: 100
   }
 }
 layer {
@@ -95,7 +95,7 @@ layer {
     lr_mult: 2
   }
   inner_product_param {
-    num_output: 9
+    num_output: 49
     weight_filler {
       type: "xavier"
     }

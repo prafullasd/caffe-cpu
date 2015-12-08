@@ -10,15 +10,15 @@ import pylab as pl
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Generate HDF5DataLayer sample_data.h5
-d = 3
+d = 7
 sigma = 0.25
-noise = 0.5
+noise = 0.9
 
 num_cols = 2
 height = 1
 width = 1
 train_rows = 2000
-test_rows = 100
+test_rows = 500
 
 def getNeighbors(l):
   neighbors = []

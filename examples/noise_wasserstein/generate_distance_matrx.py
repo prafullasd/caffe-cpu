@@ -9,7 +9,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Generate HDF5DataLayer distance_matrix.h5
 
-d = 3
+d = 7
 data = np.arange(d ** 4)
 data = data.reshape(d*d, d*d)
 data = data.astype('float32')
