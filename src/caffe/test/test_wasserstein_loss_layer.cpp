@@ -45,6 +45,7 @@ TYPED_TEST_CASE(WassersteinLossLayerTest, TestDtypes);
 
 
 TYPED_TEST(WassersteinLossLayerTest, TestGradientCPU) {
+  // TODO: Fix test to instead check whether difference in gradient lies in the subspace spanned by (1,1)
   LayerParameter layer_param;
   layer_param.mutable_wasserstein_param()->set_source(CMAKE_SOURCE_DIR "caffe/test/test_data/sample_dist_mat.h5");
   WassersteinLossLayer<TypeParam> layer(layer_param);
